@@ -15,15 +15,18 @@ var hash = crypto.createHash('sha256');
 db.serialize(function() {
         var server = http.createServer(function(req, res){
                 if(url.parse(req.url).pathname == '/shortener'){
+                        var send = false;
                         if(url.parse(req.url).query != null){
                                 let target = url.parse(req.url,true).query.url;
                                 if(target != null){
-                                        shortener(res, target)
-                                }else{
-                                        res.writeHeader(200, {"Content-Type": "text/html"});
-                                        res.write(webpage);
-                                        res.end();
+                                        shortener(res, target);
+                                        send = true;
                                 }
+                        }
+                        if(!send){
+                                res.writeHeader(200, {"Content-Type": "text/html"});
+                                res.write(webpage);
+                                res.end(); 
                         }
                 }else{
                         orig_url(url.parse(req.url).pathname, res);
