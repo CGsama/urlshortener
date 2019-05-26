@@ -1,3 +1,6 @@
+var domain = "http://chime.icu/";
+var errjump = "http://corsethime.com/";
+
 var http = require('http');
 var url = require('url');
 var sqlite3 = require('sqlite3').verbose();
@@ -5,6 +8,7 @@ var sqlite3 = require('sqlite3').verbose();
 var db = new sqlite3.Database('url.db');
 var crypto = require('crypto');
 var hash = crypto.createHash('sha256');
+
 
 //process.stdin.resume();
 
@@ -56,7 +60,7 @@ function shortener(res, url){
 
 function back302(res, key){
         res.writeHead(200, {'content-type': 'text/plain'});
-        let output = "http://chime.icu/" + key;
+        let output = domain + key;
         res.write(output);
         //console.log(output);
         res.end();
@@ -86,8 +90,9 @@ function orig_url(pathname, res){
                         res.writeHead(302, {'Location': row.long});
                         res.end();
                 }else{
-                        res.writeHead(404, {'content-type': 'text/plain'});
-                        res.write("404");
+                        //res.writeHead(404, {'content-type': 'text/plain'});
+                        //res.write("404");
+                        res.writeHead(302, {'Location': errjump});
                         res.end();
                 }
                 return;
