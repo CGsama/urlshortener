@@ -19,6 +19,10 @@ db.serialize(function() {
                                 let target = url.parse(req.url,true).query.url;
                                 if(target != null){
                                         shortener(res, target)
+                                }else{
+                                        res.writeHeader(200, {"Content-Type": "text/html"});
+                                        res.write(webpage);
+                                        res.end();
                                 }
                         }
                 }else{
@@ -99,4 +103,4 @@ function orig_url(pathname, res){
         });
         s.finalize();
 }
-
+var webpage = "<html>\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<meta name=\"author\" content=\"CorsetHime\">\r\n<title>URL Shortener<\/title>\r\n<\/head>\r\n<body>\r\n<div style=\"text-align:center\"><input type=\"button\" value=\"URL Shortener\" onclick=\"shortener();\"\/><\/div>\r\n<script type=\"text\/javascript\">\r\nfunction shortener() {\r\n  var orig_url = prompt(\"Please enter the url wants to be shortten\",\"" + domain + "\");\r\n  try{\r\n    var xhr = new XMLHttpRequest();\r\n    xhr.open(\"GET\", \"" + domain + "shortener?url=\" + orig_url, false);\r\n    xhr.send(null);\r\n    console.log(xhr);\r\n    prompt(\"Your input has been shortten\", xhr.responseText);\r\n  }catch(err){\r\n\twindow.open(\"" + domain + "shortener?url=\" + orig_url);\r\n  }\r\n}\r\n<\/script>\r\n<\/body>\r\n<\/html>";
