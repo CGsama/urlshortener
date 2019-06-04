@@ -20,6 +20,7 @@ var domain = config.domain;
 var errjump = config.errjump;
 var port = config.port;
 var logging = config.logging;
+var usehost = config.usehost;
 
 db.serialize(function() {
 	var server = http.createServer(function(req, res){
@@ -35,11 +36,18 @@ db.serialize(function() {
 			if(url.parse(req.url).query != null){
 				let target = url.parse(req.url,true).query.url;
 				if(target != null){
-					shortener(res, target);
+					shortener(req.headers.host, res, target);
 					send = true;
 				}
 			}
 			if(!send){
+				let webpage = "<html>\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<meta name=\"author\" content=\"CorsetHime\">\r\n<title>URL Shortener<\/title>\r\n<\/head>\r\n<body>\r\n<div style=\"text-align:center\"><input type=\"button\" value=\"URL Shortener\" onclick=\"shortener();\"\/><\/div>\r\n<script type=\"text\/javascript\">\r\nfunction shortener() {\r\n  var orig_url = prompt(\"Please enter the url wants to be shortten\",\""
+				+ (usehost ? ("http://" + req.headers.host + "/") : domain)
+				+ "\");\r\n  try{\r\n    var xhr = new XMLHttpRequest();\r\n    xhr.open(\"GET\", \""
+				+ (usehost ? ("http://" + req.headers.host + "/") : domain)
+				+ "shortener?url=\" + orig_url, false);\r\n    xhr.send(null);\r\n    console.log(xhr);\r\n    prompt(\"Your input has been shortten\", xhr.responseText);\r\n  }catch(err){\r\n\twindow.open(\""
+				+ (usehost ? ("http://" + req.headers.host + "/") : domain)
+				+ "shortener?url=\" + orig_url);\r\n  }\r\n}\r\n<\/script>\r\n<\/body>\r\n<\/html>"
 				res.writeHeader(200, {"Content-Type": "text/html"});
 				res.write(webpage);
 				res.end(); 
@@ -57,7 +65,7 @@ db.serialize(function() {
 });*/
 
 
-function shortener(res, url){
+function shortener(host, res, url){
 	//var db = new sqlite3.Database('url.db');
 	//db.run("CREATE TABLE url (short TEXT, long TEXT)");
 	let key = crypto.createHash('sha256').update("" + url).digest('base64').replace(/\W/g, "").substring(0,6);
@@ -69,21 +77,21 @@ function shortener(res, url){
 		if(row != null){
 			//console.log(row.id + ":" + row.short + ":" + row.long);
 			if(row.long == url){
-				return back302(res, key);
+				return back302(host, res, key);
 			}else{
-				return back302(res, shortener(url + Math.random()));
+				return back302(host, res, shortener(host, res, url + Math.random()));
 			}
 			//console.log(exist);
 		}else{
-			return back302(res, write_db(key, url));
+			return back302(host, res, write_db(key, url));
 		}
 	});
 	s.finalize();
 }
 
-function back302(res, key){
+function back302(host, res, key){
 	res.writeHead(200, {'content-type': 'text/plain'});
-	let output = domain + key;
+	let output = (usehost ? ("http://" + host + "/") : domain) + key;
 	res.write(output);
 	//console.log(output);
 	res.end();
@@ -122,4 +130,3 @@ function orig_url(pathname, res){
 	});
 	s.finalize();
 }
-var webpage = "<html>\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<meta name=\"author\" content=\"CorsetHime\">\r\n<title>URL Shortener<\/title>\r\n<\/head>\r\n<body>\r\n<div style=\"text-align:center\"><input type=\"button\" value=\"URL Shortener\" onclick=\"shortener();\"\/><\/div>\r\n<script type=\"text\/javascript\">\r\nfunction shortener() {\r\n  var orig_url = prompt(\"Please enter the url wants to be shortten\",\"" + domain + "\");\r\n  try{\r\n    var xhr = new XMLHttpRequest();\r\n    xhr.open(\"GET\", \"" + domain + "shortener?url=\" + orig_url, false);\r\n    xhr.send(null);\r\n    console.log(xhr);\r\n    prompt(\"Your input has been shortten\", xhr.responseText);\r\n  }catch(err){\r\n\twindow.open(\"" + domain + "shortener?url=\" + orig_url);\r\n  }\r\n}\r\n<\/script>\r\n<\/body>\r\n<\/html>";

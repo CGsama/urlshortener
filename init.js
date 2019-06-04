@@ -12,6 +12,7 @@ catch(e){
 	obj.errjump = readline.question("What is your error jump? ");
 	obj.port = readline.question("What is your port? ");
 	obj.logging = readline.question("Wanna log usage? (Yes/No) ").toUpperCase() == "NO" ? false : true;
+	obj.usehost = readline.question("Wanna use request host? (Yes/No) ").toUpperCase() == "NO" ? false : true;
 	fs.writeFileSync('config.json', JSON.stringify(obj));
 }
 finally{
