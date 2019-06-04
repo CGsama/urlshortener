@@ -29,6 +29,7 @@ db.serialize(function() {
 			i.run([(new Date()).toISOString(), requestIp.getClientIp(req), req.headers.host + req.url]);
 			i.finalize();
 		}
+		console.log((new Date()).toISOString() + " | " + requestIp.getClientIp(req) + " | " + req.headers.host + req.url);
 		if(url.parse(req.url).pathname == '/shortener'){
 			var send = false;
 			if(url.parse(req.url).query != null){
@@ -66,13 +67,13 @@ function shortener(res, url){
 	s.get(key, function(err, row) {
 		//console.log(""+row.long+":"+url+":"+(row.long == url));
 		if(row != null){
-			console.log(row.id + ":" + row.short + ":" + row.long);
+			//console.log(row.id + ":" + row.short + ":" + row.long);
 			if(row.long == url){
 				return back302(res, key);
 			}else{
 				return back302(res, shortener(url + Math.random()));
 			}
-			console.log(exist);
+			//console.log(exist);
 		}else{
 			return back302(res, write_db(key, url));
 		}
