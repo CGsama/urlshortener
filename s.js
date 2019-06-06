@@ -21,6 +21,7 @@ var errjump = config.errjump;
 var port = config.port;
 var logging = config.logging;
 var usehost = config.usehost;
+var googleprefix = config.googleprefix;
 
 db.serialize(function() {
 	var server = http.createServer(function(req, res){
@@ -41,15 +42,8 @@ db.serialize(function() {
 				}
 			}
 			if(!send){
-				let webpage = "<html>\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<meta name=\"author\" content=\"CorsetHime\">\r\n<title>URL Shortener<\/title>\r\n<\/head>\r\n<body>\r\n<div style=\"text-align:center\"><input type=\"button\" value=\"URL Shortener\" onclick=\"shortener();\"\/><\/div>\r\n<script type=\"text\/javascript\">\r\nfunction shortener() {\r\n  var orig_url = prompt(\"Please enter the url wants to be shortten\",\""
-				+ (usehost ? ("http://" + req.headers.host + "/") : domain)
-				+ "\");\r\n  try{\r\n    var xhr = new XMLHttpRequest();\r\n    xhr.open(\"GET\", \""
-				+ (usehost ? ("http://" + req.headers.host + "/") : domain)
-				+ "shortener?url=\" + orig_url, false);\r\n    xhr.send(null);\r\n    console.log(xhr);\r\n    prompt(\"Your input has been shortten\", xhr.responseText);\r\n  }catch(err){\r\n\twindow.open(\""
-				+ (usehost ? ("http://" + req.headers.host + "/") : domain)
-				+ "shortener?url=\" + orig_url);\r\n  }\r\n}\r\n<\/script>\r\n<\/body>\r\n<\/html>"
 				res.writeHeader(200, {"Content-Type": "text/html"});
-				res.write(webpage);
+				res.write(prepweb(req.headers.host));
 				res.end(); 
 			}
 		}else{
@@ -121,12 +115,31 @@ function orig_url(pathname, res){
 			res.writeHead(302, {'Location': row.long});
 			res.end();
 		}else{
-			//res.writeHead(404, {'content-type': 'text/plain'});
-			//res.write("404");
-			res.writeHead(302, {'Location': errjump});
+			console.log("WARNING invalid request: " + pathname);
+			if(errjump == "404"){
+				res.writeHead(404, {'content-type': 'text/plain'});
+				res.write("404");
+			}else if(errjump == "google"){
+				res.writeHead(302, {'Location': "https://www.google.com/search?q=" + encodeURI(pathname.substring(1))});
+			}else if(errjump == "googleprefix"){
+				res.writeHead(302, {'Location': "https://www.google.com/search?q=" + googleprefix + encodeURI(pathname.substring(1))});
+			}else{
+				res.writeHead(302, {'Location': errjump + pathname.substring(1)});
+			}
 			res.end();
 		}
 		return;
 	});
 	s.finalize();
+}
+
+function prepweb(host){
+	let webpage = "<html>\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<meta name=\"author\" content=\"CorsetHime\">\r\n<title>URL Shortener<\/title>\r\n<\/head>\r\n<body>\r\n<div style=\"text-align:center\"><input type=\"button\" value=\"URL Shortener\" onclick=\"shortener();\"\/><\/div>\r\n<script type=\"text\/javascript\">\r\nfunction shortener() {\r\n  var orig_url = prompt(\"Please enter the url wants to be shortten\",\""
+	+ (usehost ? ("http://" + host + "/") : domain)
+	+ "\");\r\n  try{\r\n    var xhr = new XMLHttpRequest();\r\n    xhr.open(\"GET\", \""
+	+ (usehost ? ("http://" + host + "/") : domain)
+	+ "shortener?url=\" + orig_url, false);\r\n    xhr.send(null);\r\n    console.log(xhr);\r\n    prompt(\"Your input has been shortten\", xhr.responseText);\r\n  }catch(err){\r\n\twindow.open(\""
+	+ (usehost ? ("http://" + host + "/") : domain)
+	+ "shortener?url=\" + orig_url);\r\n  }\r\n}\r\n<\/script>\r\n<\/body>\r\n<\/html>";
+	return webpage;
 }
