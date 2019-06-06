@@ -23,6 +23,8 @@ var logging = config.logging;
 var usehost = config.usehost;
 var googleprefix = config.googleprefix;
 
+var hostmap = JSON.parse(fs.readFileSync('hostmap.json'));
+
 db.serialize(function() {
 	var server = http.createServer(function(req, res){
 		if(logging){
@@ -47,7 +49,7 @@ db.serialize(function() {
 				res.end(); 
 			}
 		}else{
-			orig_url(url.parse(req.url).pathname, res);
+			orig_url(req.headers.host, url.parse(req.url).pathname, res);
 		}
 	});
 	server.listen(port);
@@ -103,7 +105,7 @@ function write_db(key, url){
 	//db.close();
 }
 
-function orig_url(pathname, res){
+function orig_url(host, pathname, res){
 	//var db = new sqlite3.Database('url.db');
 	let hash = pathname.substring(1,8);
 	//let out = "";
@@ -113,21 +115,31 @@ function orig_url(pathname, res){
 		if(row){
 			//console.log(row.id + ":" + row.short + ":" + row.long);
 			res.writeHead(302, {'Location': row.long});
-			res.end();
 		}else{
-			console.log("WARNING invalid request: " + pathname);
-			if(errjump == "404"){
-				res.writeHead(404, {'content-type': 'text/plain'});
-				res.write("404");
-			}else if(errjump == "google"){
-				res.writeHead(302, {'Location': "https://www.google.com/search?q=" + encodeURI(pathname.substring(1))});
-			}else if(errjump == "googleprefix"){
-				res.writeHead(302, {'Location': "https://www.google.com/search?q=" + googleprefix + encodeURI(pathname.substring(1))});
-			}else{
-				res.writeHead(302, {'Location': errjump + pathname.substring(1)});
+			let unknown = true;
+			for (const [key, value] of Object.entries(hostmap)) {
+				console.log(key, value);
+				if(host == key || pathname.substring(1) == key){
+					console.log("redirect request: " + host + pathname + " --> " + value);
+					res.writeHead(302, {'Location': value});
+					unknown = false;
+				}
 			}
-			res.end();
+			if(unknown){
+				console.log("WARNING invalid request: " + pathname);
+				if(errjump == "404"){
+					res.writeHead(404, {'content-type': 'text/plain'});
+					res.write("404");
+				}else if(errjump == "google"){
+					res.writeHead(302, {'Location': "https://www.google.com/search?q=" + encodeURI(pathname.substring(1))});
+				}else if(errjump == "googleprefix"){
+					res.writeHead(302, {'Location': "https://www.google.com/search?q=" + googleprefix + encodeURI(pathname.substring(1))});
+				}else{
+					res.writeHead(302, {'Location': errjump + pathname.substring(1)});
+				}
+			}
 		}
+		res.end();
 		return;
 	});
 	s.finalize();
