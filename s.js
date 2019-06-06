@@ -38,8 +38,9 @@ db.serialize(function() {
 			var send = false;
 			if(url.parse(req.url).query != null){
 				let target = url.parse(req.url,true).query.url;
+				let base = url.parse(req.url,true).query.host
 				if(target != null){
-					shortener(req.headers.host, res, target);
+					shortener(base == null ? req.headers.host : base, res, target);
 					send = true;
 				}
 			}
