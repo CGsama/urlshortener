@@ -87,7 +87,8 @@ function shortener(host, res, url){
 }
 
 function back302(url, host, res, key){
-	res.writeHead(200, {'content-type': 'text/plain'});
+	res.writeHead(200, {'content-type': 'text/plain', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': "GET"});
+	
 	let output = (usehost ? ("http://" + host + "/") : domain) + key;
 	log("request shortener: " + url + " --> " + output);
 	res.write(output);
