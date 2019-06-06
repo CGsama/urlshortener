@@ -33,7 +33,7 @@ db.serialize(function() {
 			i.run([(new Date()).toISOString(), requestIp.getClientIp(req), req.headers.host + req.url]);
 			i.finalize();
 		}
-		console.log((new Date()).toISOString() + " | " + requestIp.getClientIp(req) + " | " + req.headers.host + req.url);
+		log("request from " + requestIp.getClientIp(req) + " | " + req.headers.host + req.url);
 		if(url.parse(req.url).pathname == '/shortener'){
 			var send = false;
 			if(url.parse(req.url).query != null){
@@ -73,21 +73,22 @@ function shortener(host, res, url){
 		if(row != null){
 			//console.log(row.id + ":" + row.short + ":" + row.long);
 			if(row.long == url){
-				return back302(host, res, key);
+				return back302(url, host, res, key);
 			}else{
-				return back302(host, res, shortener(host, res, url + Math.random()));
+				return back302(url, host, res, shortener(host, res, url + Math.random()));
 			}
 			//console.log(exist);
 		}else{
-			return back302(host, res, write_db(key, url));
+			return back302(url, host, res, write_db(key, url));
 		}
 	});
 	s.finalize();
 }
 
-function back302(host, res, key){
+function back302(url, host, res, key){
 	res.writeHead(200, {'content-type': 'text/plain'});
 	let output = (usehost ? ("http://" + host + "/") : domain) + key;
+	log("request shortener: " + url + " --> " + output);
 	res.write(output);
 	//console.log(output);
 	res.end();
@@ -114,19 +115,20 @@ function orig_url(host, pathname, res){
 		//out = row.long;
 		if(row){
 			//console.log(row.id + ":" + row.short + ":" + row.long);
+			log("redirect shortener: " + host + pathname + " --> " + row.long);
 			res.writeHead(302, {'Location': row.long});
 		}else{
 			let unknown = true;
 			for (const [key, value] of Object.entries(hostmap)) {
-				console.log(key, value);
+				//console.log(key, value);
 				if(host == key || pathname.substring(1) == key){
-					console.log("redirect request: " + host + pathname + " --> " + value);
+					log("redirect mapping: " + host + pathname + " --> " + value);
 					res.writeHead(302, {'Location': value});
 					unknown = false;
 				}
 			}
 			if(unknown){
-				console.log("WARNING invalid request: " + pathname);
+				log("WARNING invalid request: " + host + pathname);
 				if(errjump == "404"){
 					res.writeHead(404, {'content-type': 'text/plain'});
 					res.write("404");
@@ -154,4 +156,9 @@ function prepweb(host){
 	+ (usehost ? ("http://" + host + "/") : domain)
 	+ "shortener?url=\" + orig_url);\r\n  }\r\n}\r\n<\/script>\r\n<\/body>\r\n<\/html>";
 	return webpage;
+}
+
+function log(str){
+	console.log(str)
+	fs.appendFileSync('log.txt', (new Date()).toISOString() + " | " + str + "\n");
 }
