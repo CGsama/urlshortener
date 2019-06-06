@@ -49,6 +49,10 @@ db.serialize(function() {
 				res.write(prepweb(req.headers.host));
 				res.end(); 
 			}
+		}else if(url.parse(req.url).pathname == '/surl.js'){
+			res.writeHeader(200, {"Content-Type": "application/javascript"});
+			res.write(prepscript(req.headers.host));
+			res.end();
 		}else{
 			orig_url(req.headers.host, url.parse(req.url).pathname, res);
 		}
@@ -150,17 +154,16 @@ function orig_url(host, pathname, res){
 }
 
 function prepweb(host){
-	let webpage = "<html>\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<meta name=\"author\" content=\"CorsetHime\">\r\n<title>URL Shortener<\/title>\r\n<\/head>\r\n<body>\r\n<div style=\"text-align:center\"><input type=\"button\" value=\"URL Shortener\" onclick=\"shortener();\"\/><\/div>\r\n<script type=\"text\/javascript\">\r\nfunction shortener() {\r\n  var orig_url = prompt(\"Please enter the url wants to be shortten\",\""
-	+ (usehost ? ("http://" + host + "/") : domain)
-	+ "\");\r\n  try{\r\n    var xhr = new XMLHttpRequest();\r\n    xhr.open(\"GET\", \""
-	+ (usehost ? ("http://" + host + "/") : domain)
-	+ "shortener?url=\" + orig_url, false);\r\n    xhr.send(null);\r\n    console.log(xhr);\r\n    prompt(\"Your input has been shortten\", xhr.responseText);\r\n  }catch(err){\r\n\twindow.open(\""
-	+ (usehost ? ("http://" + host + "/") : domain)
-	+ "shortener?url=\" + orig_url);\r\n  }\r\n}\r\n<\/script>\r\n<\/body>\r\n<\/html>";
+	let webpage = "<html>\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<meta name=\"author\" content=\"CorsetHime\">\r\n<title>URL Shortener<\/title>\r\n<\/head>\r\n<body>\r\n<div style=\"text-align:center\"><input type=\"button\" value=\"URL Shortener\" onclick=\"shortener();\"\/><\/div>\r\n<script type=\"text\/javascript\" src=\"http:\/\/" + host + "\/surl.js\"><\/script>\r\n<\/body>\r\n<\/html>";
 	return webpage;
 }
 
 function log(str){
 	console.log(str)
 	fs.appendFileSync('log.txt', (new Date()).toISOString() + " | " + str + "\n");
+}
+
+function prepscript(host){
+	let script = "var surlhost = \"" + host + "\";\r\nfunction shortener(){\r\n  let host = surlhost;\r\n  let orig_url = prompt(\"Please enter the url wants to be shortten\",\"http:\/\/\" + host + \"\/\");\r\n  let target_host = prompt(\"What host do you want to use?\",host);\r\n  try{\r\n    let xhr = new XMLHttpRequest();\r\n    xhr.open(\"GET\", \"http:\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host, false);\r\n    xhr.send(null);\r\n    prompt(\"Your input has been shortten\", xhr.responseText);\r\n  }catch(err){\r\n\twindow.open(\"http:\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host);\r\n  }\r\n}\r\nfunction surl(orig_url){\r\n  let host = surlhost;\r\n  let target_host = host;\r\n  let xhr = new XMLHttpRequest();\r\n  xhr.open(\"GET\", \"http:\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host, false);\r\n  xhr.send(null);\r\n  return xhr.responseText;\r\n}";
+	return script;
 }
