@@ -12,6 +12,7 @@ var db = new sqlite3.Database('url.db');
 var crypto = require('crypto');
 var hash = crypto.createHash('sha256');
 var buffer = require("Buffer");
+var mime = require('mime-types');
 
 
 //process.stdin.resume();
@@ -77,6 +78,8 @@ function app(req, res, https){
 		res.writeHeader(200, {"Content-Type": "application/javascript"});
 		res.write(prepscript(req.headers.host, https));
 		res.end();
+	}else if(url.parse(req.url).pathname == '/favicon.ico'){
+		return_file(res, "favicon.ico");
 	}else{
 		orig_url(req.headers.host, url.parse(req.url).pathname, res);
 	}
@@ -202,6 +205,19 @@ function prepscript(host, s){
 	return script;
 }
 function prepwebjump(url){
-	let html = "<!DOCTYPE html>\r\n<html>\r\n<head>\r\n<\/head>\r\n<body>\r\n\t<script>\r\n\t  var link = document.createElement(\'meta\');\r\n\t  link.setAttribute(\'http-equiv\', \'refresh\');\r\n\t  link.setAttribute(\'content\', \"0; url=" + url.replace(/[\\"']/g, '\\$&') + "\" + window.location.href);\r\n\t  document.getElementsByTagName(\'head\')[0].appendChild(link);\r\n\t<\/script>\r\n<\/body>\r\n<\/html>";
+	let html = "<!DOCTYPE html>\r\n<html>\r\n<head>\r\n<link rel=\"shortcut icon\" href=\"\/favicon.ico\">\r\n<\/head>\r\n<body>\r\n\t<script>\r\n\t  var link = document.createElement(\'meta\');\r\n\t  link.setAttribute(\'http-equiv\', \'refresh\');\r\n\t  link.setAttribute(\'content\', \"0; url=" + url.replace(/[\\"']/g, '\\$&') + "\" + window.location.href);\r\n\t  document.getElementsByTagName(\'head\')[0].appendChild(link);\r\n\t<\/script>\r\n<\/body>\r\n<\/html>";
 	return html;
+}
+
+function return_file(res, path){
+	try{
+		let data = fs.readFileSync(path);
+		res.writeHeader(200, {"Content-Type": mime.lookup(path)});
+		res.write(data);
+	}catch(e){
+		res.writeHead(404, {'content-type': 'text/plain'});
+		res.write("404");
+	}finally{
+		res.end();
+	}
 }
