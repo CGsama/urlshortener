@@ -14,6 +14,7 @@ catch(e){
 	obj.logging = readline.question("Wanna log usage? (Yes/No) ").toUpperCase() == "NO" ? false : true;
 	obj.usehost = readline.question("Wanna use request host? (Yes/No) ").toUpperCase() == "NO" ? false : true;
 	obj.googleprefix = encodeURI(readline.question("Keyword for empty google search prefix? ") + " ");
+	obj.webjump = readline.question("Wanna use web jump? (Yes/No) ").toUpperCase() == "YES" ? true : false;
 	fs.writeFileSync('config.json', JSON.stringify(obj));
 }
 finally{

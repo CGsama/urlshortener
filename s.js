@@ -10,6 +10,7 @@ var sqlite3 = require('sqlite3').verbose();
 var db = new sqlite3.Database('url.db');
 var crypto = require('crypto');
 var hash = crypto.createHash('sha256');
+var buffer = require("Buffer");
 
 
 //process.stdin.resume();
@@ -22,6 +23,7 @@ var port = config.port;
 var logging = config.logging;
 var usehost = config.usehost;
 var googleprefix = config.googleprefix;
+var webjump = config.webjump;
 
 var hostmap = JSON.parse(fs.readFileSync('hostmap.json'));
 
@@ -37,7 +39,7 @@ db.serialize(function() {
 		if(url.parse(req.url).pathname == '/shortener'){
 			var send = false;
 			if(url.parse(req.url).query != null){
-				let target = url.parse(req.url,true).query.url;
+				let target = decodeURI(Buffer.from(url.parse(req.url,true).query.url, 'base64').toString('ascii'));
 				let base = url.parse(req.url,true).query.host
 				if(target != null){
 					shortener(base == null ? req.headers.host : base, res, target);
@@ -122,14 +124,24 @@ function orig_url(host, pathname, res){
 		if(row){
 			//console.log(row.id + ":" + row.short + ":" + row.long);
 			log("redirect shortener: " + host + pathname + " --> " + row.long);
-			res.writeHead(302, {'Location': row.long});
+			if(!webjump){
+				res.writeHead(302, {'Location': encodeURI(row.long)});
+			}else{
+				res.writeHead(200, {'content-type': 'text/html', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': "GET"});
+				res.write(prepwebjump(row.long));
+			}
 		}else{
 			let unknown = true;
 			for (const [key, value] of Object.entries(hostmap)) {
 				//console.log(key, value);
 				if(host == key || pathname.substring(1) == key){
 					log("redirect mapping: " + host + pathname + " --> " + value);
-					res.writeHead(302, {'Location': value});
+					if(!webjump){
+						res.writeHead(302, {'Location': encodeURI(value)});
+					}else{
+						res.writeHead(200, {'content-type': 'text/html', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': "GET"});
+						res.write(prepwebjump(value));
+					}
 					unknown = false;
 				}
 			}
@@ -164,6 +176,10 @@ function log(str){
 }
 
 function prepscript(host){
-	let script = "var surlhost = \"" + host + "\";\r\nfunction shortener(){\r\n  let host = surlhost;\r\n  let orig_url = prompt(\"Please enter the url wants to be shortten\",\"http:\/\/\" + host + \"\/\");\r\n  let target_host = prompt(\"What host do you want to use?\",host);\r\n  try{\r\n    let xhr = new XMLHttpRequest();\r\n    xhr.open(\"GET\", \"http:\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host, false);\r\n    xhr.send(null);\r\n    prompt(\"Your input has been shortten\", xhr.responseText);\r\n  }catch(err){\r\n\twindow.open(\"http:\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host);\r\n  }\r\n}\r\nfunction surl(orig_url){\r\n  let host = surlhost;\r\n  let target_host = host;\r\n  let xhr = new XMLHttpRequest();\r\n  xhr.open(\"GET\", \"http:\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host, false);\r\n  xhr.send(null);\r\n  return xhr.responseText;\r\n}";
+	let script = "var surlhost = \"" + host + "\";\r\nfunction shortener(){\r\n  let host = surlhost;\r\n  var orig_url = encodeURI(btoa(prompt(\"Please enter the url wants to be shortten\",\"http:\/\/\" + host + \"\/\")));\r\n  let target_host = prompt(\"What host do you want to use?\",host);\r\n  try{\r\n    let xhr = new XMLHttpRequest();\r\n    xhr.open(\"GET\", \"http:\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host, false);\r\n    xhr.send(null);\r\n    prompt(\"Your input has been shortten\", xhr.responseText);\r\n  }catch(err){\r\n\twindow.open(\"http:\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host);\r\n  }\r\n}\r\nfunction surl(orig_url){\r\n  let host = surlhost;\r\n  let target_host = host;\r\n  let xhr = new XMLHttpRequest();\r\n  xhr.open(\"GET\", \"http:\/\/\" + host + \"\/shortener?url=\" + encodeURI(btoa(orig_url)) + \"&host=\" + target_host, false);\r\n  xhr.send(null);\r\n  return xhr.responseText;\r\n}";
 	return script;
+}
+function prepwebjump(url){
+	let html = "<!DOCTYPE html>\r\n<html>\r\n<head>\r\n<\/head>\r\n<body>\r\n\t<script>\r\n\t  var link = document.createElement(\'meta\');\r\n\t  link.setAttribute(\'http-equiv\', \'refresh\');\r\n\t  link.setAttribute(\'content\', \"0; url=" + url.replace(/[\\"']/g, '\\$&') + "\" + window.location.href);\r\n\t  document.getElementsByTagName(\'head\')[0].appendChild(link);\r\n\t<\/script>\r\n<\/body>\r\n<\/html>";
+	return html;
 }
