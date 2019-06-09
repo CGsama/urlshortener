@@ -3,6 +3,7 @@
 
 var requestIp = require('request-ip');
 var http = require('http');
+var https = require('https');
 var url = require('url');
 var fs = require('fs');
 var sqlite3 = require('sqlite3').verbose();
@@ -27,39 +28,14 @@ var webjump = config.webjump;
 var hostmap = JSON.parse(fs.readFileSync('hostmap.json'));
 var prefixmap = JSON.parse(fs.readFileSync('prefixmap.json'));
 
+var httpscert = {
+    key: fs.readFileSync(config.privkey),
+    cert: fs.readFileSync(config.fullchain)
+};
+
 db.serialize(function() {
-	var server = http.createServer(function(req, res){
-		if(logging){
-			let i = db.prepare("INSERT INTO history VALUES (?,?,?)");
-			//console.log(req);
-			i.run([(new Date()).toISOString(), requestIp.getClientIp(req), req.headers.host + req.url]);
-			i.finalize();
-		}
-		log("request from " + requestIp.getClientIp(req) + " | " + req.headers.host + req.url);
-		if(url.parse(req.url).pathname == '/shortener'){
-			var send = false;
-			if(url.parse(req.url).query != null){
-				let target = decodeURI(Buffer.from(url.parse(req.url,true).query.url, 'base64').toString('ascii'));
-				let base = url.parse(req.url,true).query.host
-				if(target != null){
-					shortener(base == null ? req.headers.host : base, res, target);
-					send = true;
-				}
-			}
-			if(!send){
-				res.writeHeader(200, {"Content-Type": "text/html"});
-				res.write(prepweb(req.headers.host));
-				res.end(); 
-			}
-		}else if(url.parse(req.url).pathname == '/surl.js'){
-			res.writeHeader(200, {"Content-Type": "application/javascript"});
-			res.write(prepscript(req.headers.host));
-			res.end();
-		}else{
-			orig_url(req.headers.host, url.parse(req.url).pathname, res);
-		}
-	});
-	server.listen(port);
+	http.createServer(http_app).listen(port);
+	https.createServer(httpscert, https_app).listen(443);
 });
 
 /*process.on('SIGINT', function () {
@@ -67,8 +43,47 @@ db.serialize(function() {
   db.close();
 });*/
 
+function http_app(req, res){app(req, res, "");}
+function https_app(req, res){app(req, res, "s");}
 
-function shortener(host, res, url){
+function app(req, res, https){
+	if(logging){
+		let i = db.prepare("INSERT INTO history VALUES (?,?,?)");
+		//console.log(req);
+		i.run([(new Date()).toISOString(), requestIp.getClientIp(req), req.headers.host + req.url]);
+		i.finalize();
+	}
+	log("request from " + requestIp.getClientIp(req) + " | " + req.headers.host + req.url);
+	if(url.parse(req.url).pathname == '/shortener'){
+		var send = false;
+		if(url.parse(req.url).query != null){
+			let target = decodeURI(Buffer.from(url.parse(req.url,true).query.url, 'base64').toString('ascii'));
+			let base = url.parse(req.url,true).query.host
+			if(target != null){
+				shortener(base == null ? req.headers.host : base, res, target, https);
+				send = true;
+			}
+		}
+		if(!send){
+			if(req.headers.host == domain && https != "s"){
+				res.writeHead(302, {'Location': "https://" + domain + "/shortener"});
+			}else{
+				res.writeHeader(200, {"Content-Type": "text/html"});
+				res.write(prepweb(req.headers.host, https));
+			}
+			res.end();
+		}
+	}else if(url.parse(req.url).pathname == '/surl.js'){
+		res.writeHeader(200, {"Content-Type": "application/javascript"});
+		res.write(prepscript(req.headers.host, https));
+		res.end();
+	}else{
+		orig_url(req.headers.host, url.parse(req.url).pathname, res);
+	}
+}
+
+
+function shortener(host, res, url, https){
 	//var db = new sqlite3.Database('url.db');
 	//db.run("CREATE TABLE url (short TEXT, long TEXT)");
 	let key = crypto.createHash('sha256').update("" + url).digest('base64').replace(/\W/g, "").substring(0,6);
@@ -80,22 +95,21 @@ function shortener(host, res, url){
 		if(row != null){
 			//console.log(row.id + ":" + row.short + ":" + row.long);
 			if(row.long == url){
-				return back302(url, host, res, key);
+				return back302(url, host, res, key, https);
 			}else{
-				return back302(url, host, res, shortener(host, res, url + Math.random()));
+				return shortener(host, res, url + Math.random(), https);
 			}
 			//console.log(exist);
 		}else{
-			return back302(url, host, res, write_db(key, url));
+			return back302(url, host, res, write_db(key, url), https);
 		}
 	});
 	s.finalize();
 }
 
-function back302(url, host, res, key){
+function back302(url, host, res, key, https){
 	res.writeHead(200, {'content-type': 'text/plain', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': "GET"});
-	
-	let output = (usehost ? ("http://" + host + "/") : domain) + key;
+	let output = "http" + https + "://" + (usehost ? host : domain) + "/" + key;
 	log("request shortener: " + url + " --> " + output);
 	res.write(output);
 	//console.log(output);
@@ -173,8 +187,8 @@ function orig_url(host, pathname, res){
 	s.finalize();
 }
 
-function prepweb(host){
-	let webpage = "<html>\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<meta name=\"author\" content=\"CorsetHime\">\r\n<title>URL Shortener<\/title>\r\n<\/head>\r\n<body>\r\n<div style=\"text-align:center\">\r\n<input type=\"button\" value=\"URL Shortener\" onclick=\"shortener();\"\/>\r\n<input type=\"button\" value=\"Current Page\" onclick=\"prompt_curr_surl();\"\/>\r\n<p><div style=\"text-align:center\">\r\n<p>\r\n&lt;script type=&quot;text\/javascript&quot; src=&quot;http:\/\/" + host + "\/surl.js&quot;&gt;&lt;\/script&gt;\r\n&lt;input type=&quot;button&quot; value=&quot;Short URL&quot; onclick=&quot;prompt_curr_surl();&quot;\/&gt;\r\n<\/p>\r\n<\/div><\/p>\r\n<\/div>\r\n<script type=\"text\/javascript\" src=\"http:\/\/" + host + "\/surl.js\"><\/script>\r\n<\/body>\r\n<\/html>";
+function prepweb(host, s){
+	let webpage = "<html>\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<meta name=\"author\" content=\"CorsetHime\">\r\n<title>URL Shortener<\/title>\r\n<\/head>\r\n<body>\r\n<div style=\"text-align:center\">\r\n<input type=\"button\" value=\"URL Shortener\" onclick=\"shortener();\"\/>\r\n<input type=\"button\" value=\"Current Page\" onclick=\"prompt_curr_surl();\"\/>\r\n<p><div style=\"text-align:center\">\r\n<p>\r\n&lt;script type=&quot;text\/javascript&quot; src=&quot;http" + s + ":\/\/" + host + "\/surl.js&quot;&gt;&lt;\/script&gt;\r\n&lt;input type=&quot;button&quot; value=&quot;Short URL&quot; onclick=&quot;prompt_curr_surl();&quot;\/&gt;\r\n<\/p>\r\n<\/div><\/p>\r\n<\/div>\r\n<script type=\"text\/javascript\" src=\"http" + s + ":\/\/" + host + "\/surl.js\"><\/script>\r\n<\/body>\r\n<\/html>";
 	return webpage;
 }
 
@@ -183,8 +197,8 @@ function log(str){
 	fs.appendFileSync('log.txt', (new Date()).toISOString() + " | " + str + "\n");
 }
 
-function prepscript(host){
-	let script = "var surlhost = \"" + host + "\";\r\nfunction shortener(){\r\n  let host = surlhost;\r\n  var orig_url = encodeURI(btoa(prompt(\"Please enter the url wants to be shortten\",window.location.href)));\r\n  let target_host = prompt(\"What host do you want to use?\",host);\r\n  try{\r\n    let xhr = new XMLHttpRequest();\r\n    xhr.open(\"GET\", \"http:\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host, false);\r\n    xhr.send(null);\r\n    prompt(\"Your input has been shortten\", xhr.responseText);\r\n  }catch(err){\r\n\twindow.open(\"http:\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host);\r\n  }\r\n}\r\nfunction surl(orig_url){\r\n  let host = surlhost;\r\n  let target_host = host;\r\n  let xhr = new XMLHttpRequest();\r\n  xhr.open(\"GET\", \"http:\/\/\" + host + \"\/shortener?url=\" + encodeURI(btoa(orig_url)) + \"&host=\" + target_host, false);\r\n  xhr.send(null);\r\n  return xhr.responseText;\r\n}\r\nfunction prompt_curr_surl(){\r\n  prompt(\"Current page\",surl(window.location.href));\r\n}";
+function prepscript(host, s){
+	let script = "var surlhost = \"" + host + "\";\r\nfunction shortener(){\r\n  let host = surlhost;\r\n  var orig_url = encodeURI(btoa(prompt(\"Please enter the url wants to be shortten\",window.location.href)));\r\n  let target_host = prompt(\"What host do you want to use?\",host);\r\n  try{\r\n    let xhr = new XMLHttpRequest();\r\n    xhr.open(\"GET\", \"http" + s + ":\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host, false);\r\n    xhr.send(null);\r\n    prompt(\"Your input has been shortten\", xhr.responseText);\r\n  }catch(err){\r\n\twindow.open(\"http" + s + ":\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host);\r\n  }\r\n}\r\nfunction surl(orig_url){\r\n  let host = surlhost;\r\n  let target_host = host;\r\n  let xhr = new XMLHttpRequest();\r\n  xhr.open(\"GET\", \"http" + s + ":\/\/\" + host + \"\/shortener?url=\" + encodeURI(btoa(orig_url)) + \"&host=\" + target_host, false);\r\n  xhr.send(null);\r\n  return xhr.responseText;\r\n}\r\nfunction prompt_curr_surl(){\r\n  prompt(\"Current page\",surl(window.location.href));\r\n}";
 	return script;
 }
 function prepwebjump(url){

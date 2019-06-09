@@ -15,6 +15,8 @@ catch(e){
 	obj.usehost = readline.question("Wanna use request host? (Yes/No) ").toUpperCase() == "NO" ? false : true;
 	obj.googleprefix = encodeURI(readline.question("Keyword for empty google search prefix? ") + " ");
 	obj.webjump = readline.question("Wanna use web jump? (Yes/No) ").toUpperCase() == "YES" ? true : false;
+	obj.privkey = "/etc/letsencrypt/live/" + obj.domain + "/privkey.pem";
+	obj.fullchain = "/etc/letsencrypt/live/" + obj.domain + "/fullchain.pem";
 	fs.writeFileSync('config.json', JSON.stringify(obj));
 }
 finally{
