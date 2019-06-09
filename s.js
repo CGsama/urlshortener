@@ -80,6 +80,9 @@ function app(req, res, https){
 		res.end();
 	}else if(url.parse(req.url).pathname == '/favicon.ico'){
 		return_file(res, "favicon.ico");
+	}
+	else if(url.parse(req.url).pathname == '/apple-touch-icon.png'){
+		return_file(res, "apple-touch-icon.png");
 	}else{
 		orig_url(req.headers.host, url.parse(req.url).pathname, res);
 	}
@@ -205,7 +208,7 @@ function prepscript(host, s){
 	return script;
 }
 function prepwebjump(url){
-	let html = "<!DOCTYPE html>\r\n<html>\r\n<head>\r\n<link rel=\"shortcut icon\" href=\"\/favicon.ico\">\r\n<\/head>\r\n<body>\r\n\t<script>\r\n\t  var link = document.createElement(\'meta\');\r\n\t  link.setAttribute(\'http-equiv\', \'refresh\');\r\n\t  link.setAttribute(\'content\', \"0; url=" + url.replace(/[\\"']/g, '\\$&') + "\" + window.location.href);\r\n\t  document.getElementsByTagName(\'head\')[0].appendChild(link);\r\n\t<\/script>\r\n<\/body>\r\n<\/html>";
+	let html = "<!DOCTYPE html>\r\n<html>\r\n<head>\r\n<\/head>\r\n<body>\r\n\t<script>\r\n\t  var link = document.createElement(\'meta\');\r\n\t  link.setAttribute(\'http-equiv\', \'refresh\');\r\n\t  link.setAttribute(\'content\', \"0; url=" + url.replace(/[\\"']/g, '\\$&') + "\" + window.location.href);\r\n\t  document.getElementsByTagName(\'head\')[0].appendChild(link);\r\n\t<\/script>\r\n<\/body>\r\n<\/html>";
 	return html;
 }
 
