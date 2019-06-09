@@ -166,7 +166,7 @@ function orig_url(host, pathname, res){
 }
 
 function prepweb(host){
-	let webpage = "<html>\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<meta name=\"author\" content=\"CorsetHime\">\r\n<title>URL Shortener<\/title>\r\n<\/head>\r\n<body>\r\n<div style=\"text-align:center\"><input type=\"button\" value=\"URL Shortener\" onclick=\"shortener();\"\/><\/div>\r\n<script type=\"text\/javascript\" src=\"http:\/\/" + host + "\/surl.js\"><\/script>\r\n<\/body>\r\n<\/html>";
+	let webpage = "<html>\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<meta name=\"author\" content=\"CorsetHime\">\r\n<title>URL Shortener<\/title>\r\n<\/head>\r\n<body>\r\n<div style=\"text-align:center\">\r\n<input type=\"button\" value=\"URL Shortener\" onclick=\"shortener();\"\/>\r\n<input type=\"button\" value=\"Current Page\" onclick=\"prompt_curr_surl();\"\/>\r\n<p><div style=\"text-align:center\">\r\n<p>\r\n&lt;script type=&quot;text\/javascript&quot; src=&quot;http:\/\/" + host + "\/surl.js&quot;&gt;&lt;\/script&gt;\r\n&lt;input type=&quot;button&quot; value=&quot;Short URL&quot; onclick=&quot;prompt_curr_surl();&quot;\/&gt;\r\n<\/p>\r\n<\/div><\/p>\r\n<\/div>\r\n<script type=\"text\/javascript\" src=\"http:\/\/" + host + "\/surl.js\"><\/script>\r\n<\/body>\r\n<\/html>";
 	return webpage;
 }
 
@@ -176,7 +176,7 @@ function log(str){
 }
 
 function prepscript(host){
-	let script = "var surlhost = \"" + host + "\";\r\nfunction shortener(){\r\n  let host = surlhost;\r\n  var orig_url = encodeURI(btoa(prompt(\"Please enter the url wants to be shortten\",\"http:\/\/\" + host + \"\/\")));\r\n  let target_host = prompt(\"What host do you want to use?\",host);\r\n  try{\r\n    let xhr = new XMLHttpRequest();\r\n    xhr.open(\"GET\", \"http:\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host, false);\r\n    xhr.send(null);\r\n    prompt(\"Your input has been shortten\", xhr.responseText);\r\n  }catch(err){\r\n\twindow.open(\"http:\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host);\r\n  }\r\n}\r\nfunction surl(orig_url){\r\n  let host = surlhost;\r\n  let target_host = host;\r\n  let xhr = new XMLHttpRequest();\r\n  xhr.open(\"GET\", \"http:\/\/\" + host + \"\/shortener?url=\" + encodeURI(btoa(orig_url)) + \"&host=\" + target_host, false);\r\n  xhr.send(null);\r\n  return xhr.responseText;\r\n}";
+	let script = "var surlhost = \"" + host + "\";\r\nfunction shortener(){\r\n  let host = surlhost;\r\n  var orig_url = encodeURI(btoa(prompt(\"Please enter the url wants to be shortten\",window.location.href)));\r\n  let target_host = prompt(\"What host do you want to use?\",host);\r\n  try{\r\n    let xhr = new XMLHttpRequest();\r\n    xhr.open(\"GET\", \"http:\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host, false);\r\n    xhr.send(null);\r\n    prompt(\"Your input has been shortten\", xhr.responseText);\r\n  }catch(err){\r\n\twindow.open(\"http:\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host);\r\n  }\r\n}\r\nfunction surl(orig_url){\r\n  let host = surlhost;\r\n  let target_host = host;\r\n  let xhr = new XMLHttpRequest();\r\n  xhr.open(\"GET\", \"http:\/\/\" + host + \"\/shortener?url=\" + encodeURI(btoa(orig_url)) + \"&host=\" + target_host, false);\r\n  xhr.send(null);\r\n  return xhr.responseText;\r\n}\r\nfunction prompt_curr_surl(){\r\n  prompt(\"Current page\",surl(window.location.href));\r\n}";
 	return script;
 }
 function prepwebjump(url){
