@@ -22,10 +22,10 @@ var errjump = config.errjump;
 var port = config.port;
 var logging = config.logging;
 var usehost = config.usehost;
-var googleprefix = config.googleprefix;
 var webjump = config.webjump;
 
 var hostmap = JSON.parse(fs.readFileSync('hostmap.json'));
+var prefixmap = JSON.parse(fs.readFileSync('prefixmap.json'));
 
 db.serialize(function() {
 	var server = http.createServer(function(req, res){
@@ -153,7 +153,15 @@ function orig_url(host, pathname, res){
 				}else if(errjump == "google"){
 					res.writeHead(302, {'Location': "https://www.google.com/search?q=" + encodeURI(pathname.substring(1))});
 				}else if(errjump == "googleprefix"){
-					res.writeHead(302, {'Location': "https://www.google.com/search?q=" + googleprefix + encodeURI(pathname.substring(1))});
+					let searchprefix = host;
+					for (const [key, value] of Object.entries(prefixmap)) {
+						//console.log(key, value);
+						if(host == key){
+							searchprefix = value;
+							break;
+						}
+					}
+					res.writeHead(302, {'Location': "https://www.google.com/search?q=" + searchprefix + encodeURI(pathname.substring(1))});
 				}else{
 					res.writeHead(302, {'Location': errjump + pathname.substring(1)});
 				}
