@@ -4,6 +4,7 @@
   "description": "url shortener",
   "main": "s.js",
   "dependencies": {
+    "2fa": "^0.1.2",
     "Buffer": "0.0.0",
     "mime-types": "^2.1.24",
     "readline-sync": "^1.4.9",

@@ -13,6 +13,7 @@ var crypto = require('crypto');
 var hash = crypto.createHash('sha256');
 var buffer = require("Buffer");
 var mime = require('mime-types');
+var tfa = require('2fa');
 
 
 //process.stdin.resume();
@@ -25,6 +26,7 @@ var port = config.port;
 var logging = config.logging;
 var usehost = config.usehost;
 var webjump = config.webjump;
+var totp = config.totp;
 
 var hostmap = JSON.parse(fs.readFileSync('hostmap.json'));
 var prefixmap = JSON.parse(fs.readFileSync('prefixmap.json'));
@@ -83,6 +85,8 @@ function app(req, res, https){
 	}
 	else if(url.parse(req.url).pathname == '/apple-touch-icon.png'){
 		return_file(res, "apple-touch-icon.png");
+	}else if(url.parse(req.url).pathname.match(new RegExp("(^\\/check)(\\d\\d\\d\\d\\d\\d$)","g")) != null){
+		twofa(url.parse(req.url).pathname.substring(6,12), res)
 	}else{
 		orig_url(req.headers.host, url.parse(req.url).pathname, res);
 	}
@@ -203,6 +207,17 @@ function log(str){
 	fs.appendFileSync('log.txt', (new Date()).toISOString() + " | " + str + "\n");
 }
 
+function liststorage(res){
+	var str = "";
+	db.each("SELECT rowid AS id, short, long FROM url", function(err, row) {
+		str += row.id + ":" + row.short + ":" + row.long + "\n";
+	},function(){
+		res.writeHead(200, {'content-type': 'text/plain'});
+		res.write(str);
+		res.end();
+	});
+}
+
 function prepscript(host, s){
 	let script = "var surlhost = \"" + host + "\";\r\nfunction shortener(){\r\n  let host = surlhost;\r\n  var orig_url = encodeURI(btoa(prompt(\"Please enter the url wants to be shortten\",window.location.href)));\r\n  let target_host = prompt(\"What host do you want to use?\",host);\r\n  try{\r\n    let xhr = new XMLHttpRequest();\r\n    xhr.open(\"GET\", \"http" + s + ":\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host, false);\r\n    xhr.send(null);\r\n    prompt(\"Your input has been shortten\", xhr.responseText);\r\n  }catch(err){\r\n\twindow.open(\"http" + s + ":\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host);\r\n  }\r\n}\r\nfunction surl(orig_url){\r\n  let host = surlhost;\r\n  let target_host = host;\r\n  let xhr = new XMLHttpRequest();\r\n  xhr.open(\"GET\", \"http" + s + ":\/\/\" + host + \"\/shortener?url=\" + encodeURI(btoa(orig_url)) + \"&host=\" + target_host, false);\r\n  xhr.send(null);\r\n  return xhr.responseText;\r\n}\r\nfunction prompt_curr_surl(){\r\n  prompt(\"Current page\",surl(window.location.href));\r\n}";
 	return script;
@@ -222,5 +237,17 @@ function return_file(res, path){
 		res.write("404");
 	}finally{
 		res.end();
+	}
+}
+
+function twofa(code, res){
+	let validTOTP = tfa.verifyTOTP(totp, code);
+	log("login to list with code: " + code + " valid? " + validTOTP);
+	if(validTOTP){
+		liststorage(res);
+	}else{
+		res.writeHead(404, {'content-type': 'text/plain'});
+		res.write("404");
+		res.end();		
 	}
 }
