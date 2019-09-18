@@ -14,6 +14,7 @@ var hash = crypto.createHash('sha256');
 var buffer = require("Buffer");
 var mime = require('mime-types');
 var tfa = require('2fa');
+var qrcode = require('qrcode');
 
 
 //process.stdin.resume();
@@ -27,18 +28,22 @@ var logging = config.logging;
 var usehost = config.usehost;
 var webjump = config.webjump;
 var totp = config.totp;
+var usessl = config.usessl;
 
 var hostmap = JSON.parse(fs.readFileSync('hostmap.json'));
 var prefixmap = JSON.parse(fs.readFileSync('prefixmap.json'));
 
-var httpscert = {
-    key: fs.readFileSync(config.privkey),
-    cert: fs.readFileSync(config.fullchain)
-};
+var httpscert;
 
 db.serialize(function() {
 	http.createServer(http_app).listen(port);
-	https.createServer(httpscert, https_app).listen(443);
+	if(usessl){
+		httpscert = {
+			key: fs.readFileSync(config.privkey),
+			cert: fs.readFileSync(config.fullchain)
+		};
+		https.createServer(httpscert, https_app).listen(443);
+	}
 });
 
 /*process.on('SIGINT', function () {
@@ -121,9 +126,11 @@ function back302(url, host, res, key, https){
 	res.writeHead(200, {'content-type': 'text/plain', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': "GET"});
 	let output = "http" + https + "://" + (usehost ? host : domain) + "/" + key;
 	log("request shortener: " + url + " --> " + output);
-	res.write(output);
 	//console.log(output);
-	res.end();
+	qrcode.toDataURL(output, function(err, qrstr){
+		res.write(output + "|" + qrstr);
+		res.end();
+	});
 }
 
 function write_db(key, url){
@@ -219,7 +226,7 @@ function liststorage(res){
 }
 
 function prepscript(host, s){
-	let script = "var surlhost = \"" + host + "\";\r\nfunction shortener(){\r\n  let host = surlhost;\r\n  var orig_url = encodeURI(btoa(prompt(\"Please enter the url wants to be shortten\",window.location.href)));\r\n  let target_host = prompt(\"What host do you want to use?\",host);\r\n  try{\r\n    let xhr = new XMLHttpRequest();\r\n    xhr.open(\"GET\", \"http" + s + ":\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host, false);\r\n    xhr.send(null);\r\n    prompt(\"Your input has been shortten\", xhr.responseText);\r\n  }catch(err){\r\n\twindow.open(\"http" + s + ":\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host);\r\n  }\r\n}\r\nfunction surl(orig_url){\r\n  let host = surlhost;\r\n  let target_host = host;\r\n  let xhr = new XMLHttpRequest();\r\n  xhr.open(\"GET\", \"http" + s + ":\/\/\" + host + \"\/shortener?url=\" + encodeURI(btoa(orig_url)) + \"&host=\" + target_host, false);\r\n  xhr.send(null);\r\n  return xhr.responseText;\r\n}\r\nfunction prompt_curr_surl(){\r\n  prompt(\"Current page\",surl(window.location.href));\r\n}";
+	let script = "var surlhost = \"" + host + "\";\r\nfunction shortener(){\r\n  let host = surlhost;\r\n  var orig_url = encodeURI(btoa(prompt(\"Please enter the url wants to be shortten\",window.location.href)));\r\n  let target_host = prompt(\"What host do you want to use?\",host);\r\n  try{\r\n    let xhr = new XMLHttpRequest();\r\n    xhr.open(\"GET\", \"http" + s + ":\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host, false);\r\n    xhr.send(null);\r\n    let res = xhr.responseText.split(\"|\");\r\n    prompt(\"Your input has been shortten\", res[0]);\r\n    let makeqr = confirm(\"Want QR?\");\r\n    if(makeqr){\r\n    console.log(res[1]);\r\n      openb64img(res[1]);\r\n    }\r\n  }catch(err){\r\n\twindow.open(\"http" + s + ":\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host);\r\n  }\r\n}\r\nfunction surl(orig_url){\r\n  let host = surlhost;\r\n  let target_host = host;\r\n  let xhr = new XMLHttpRequest();\r\n  xhr.open(\"GET\", \"http" + s + ":\/\/\" + host + \"\/shortener?url=\" + encodeURI(btoa(orig_url)) + \"&host=\" + target_host, false);\r\n  xhr.send(null);\r\n  return ((xhr.responseText).split(\"|\"))[0];\r\n}\r\nfunction prompt_curr_surl(){\r\n  prompt(\"Current page\",surl(window.location.href));\r\n}\r\nfunction openb64img(base64URL){\r\n  let win = window.open();\r\n  win.document.write(\'<iframe src=\"\' + base64URL  + \'\" frameborder=\"0\" style=\"border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;\" allowfullscreen><\/iframe>\');\r\n}";
 	return script;
 }
 function prepwebjump(url){
