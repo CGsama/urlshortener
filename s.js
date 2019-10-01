@@ -65,8 +65,8 @@ function app(req, res, https){
 	if(url.parse(req.url).pathname == '/shortener'){
 		var send = false;
 		if(url.parse(req.url).query != null){
-			console.log(url.parse(req.url).query.url);
-			if(url.parse(req.url).query.url != null){
+			//console.log(url.parse(req.url).query.url);
+			if(url.parse(req.url,true).query.url != null){
 				let target = decodeURI(Buffer.from(url.parse(req.url,true).query.url, 'base64').toString('ascii'));
 				let base = url.parse(req.url,true).query.host
 				if(target != null){
