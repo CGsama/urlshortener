@@ -159,7 +159,12 @@ function orig_url(host, pathname, res){
 			//console.log(row.id + ":" + row.short + ":" + row.long);
 			log("redirect shortener: " + host + pathname + " --> " + row.long);
 			if(!webjump){
-				res.writeHead(302, {'Location': encodeURI(row.long)});
+				if(row.long.substring(0,4) != "http"){
+					//res.write("<xmp>" + row.long.substring(0,100).replace("xmp", "x-m-p").replace("script", "s-c-r-i-p-t") + "<\\xmp>");
+					res.write(row.long.substring(0,100).replace(/[^0-9a-z\s\.\,\-!?:@+]/gi, ''));
+				}else{
+					res.writeHead(302, {'Location': encodeURI(row.long)});
+				}
 			}else{
 				res.writeHead(200, {'content-type': 'text/html', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': "GET"});
 				res.write(prepwebjump(row.long));
