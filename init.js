@@ -17,12 +17,16 @@ catch(e){
 	obj.webjump = readline.question("Wanna use web jump? (Yes/No) ").toUpperCase() == "YES" ? true : false;
 	obj.privkey = "/etc/letsencrypt/live/" + obj.domain + "/privkey.pem";
 	obj.fullchain = "/etc/letsencrypt/live/" + obj.domain + "/fullchain.pem";
+	obj.usessl = readline.question("Wanna use https? (Yes/No) ").toUpperCase() == "YES" ? true : false;
+	obj.msky = {};
 	obj.msky.dbbser = readline.question("Msky DB username? ");
 	obj.msky.dbpasswd = readline.question("Msky DB password? ");
 	obj.msky.dbhost = readline.question("Msky DB hostname? ");
 	obj.msky.dbport = readline.question("Msky DB port? ");
 	obj.msky.db = readline.question("Msky DB name? ");
 	fs.writeFileSync('config.json', JSON.stringify(obj));
+	fs.writeFileSync('hostmap.json', "{}");
+	fs.writeFileSync('prefixmap.json', "{}");
 }
 finally{
 	var db = new sqlite3.Database('url.db');
