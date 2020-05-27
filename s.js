@@ -36,7 +36,7 @@ var prefixmap = JSON.parse(fs.readFileSync('prefixmap.json'));
 var httpscert;
 
 db.serialize(function() {
-	http.createServer(http_app).listen(port);
+	http.createServer(http_app).listen(port, '0.0.0.0');
 	if(usessl){
 		httpscert = {
 			key: fs.readFileSync(config.privkey),
