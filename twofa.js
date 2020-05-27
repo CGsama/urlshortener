@@ -1,5 +1,6 @@
 var tfa = require('2fa');
 var fs = require('fs');
+var readline = require('readline-sync');
 function gen2fa(org, url){
 	tfa.generateKey(32, function(err, key) {
 		console.log(key)
