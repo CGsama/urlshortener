@@ -1,9 +1,9 @@
 var tfa = require('2fa');
 var fs = require('fs');
-function gen2fa(){
+function gen2fa(org, url){
 	tfa.generateKey(32, function(err, key) {
 		console.log(key)
-		tfa.generateGoogleQR('C3LO', 'stnr.icu', key, function(err, qr){
+		tfa.generateGoogleQR(org, url, key, function(err, qr){
 			console.log(qr);
 		});
 		var config = JSON.parse(fs.readFileSync('config.json'));
@@ -11,5 +11,6 @@ function gen2fa(){
 		fs.writeFileSync('config.json', JSON.stringify(config));
 	});
 }
-
-gen2fa();
+let org = readline.question("What is the org? ");
+let url = readline.question("What is the url? ");
+gen2fa(org, url);
