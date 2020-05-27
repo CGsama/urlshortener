@@ -55,6 +55,9 @@ function http_app(req, res){app(req, res, "");}
 function https_app(req, res){app(req, res, "s");}
 
 function app(req, res, https){
+	if(https == "" && req.headers['X-Forwarded-Proto'] == "https"){
+		https = "s";
+	}
 	if(logging){
 		let i = db.prepare("INSERT INTO history VALUES (?,?,?)");
 		//console.log(req);
