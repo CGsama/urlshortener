@@ -55,7 +55,7 @@ function http_app(req, res){app(req, res, "");}
 function https_app(req, res){app(req, res, "s");}
 
 function app(req, res, https){
-	if(https == "" && req.headers['X-Forwarded-Proto'] == "https"){
+	if(https == "" && req.headers['x-forwarded-proto'] == "https"){
 		https = "s";
 	}
 	if(logging){
