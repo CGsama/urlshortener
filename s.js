@@ -15,6 +15,7 @@ var buffer = require("Buffer");
 var mime = require('mime-types');
 var tfa = require('2fa');
 var qrcode = require('qrcode');
+var mustache = require('mustache');
 
 
 //process.stdin.resume();
@@ -216,8 +217,7 @@ function orig_url(host, pathname, res){
 }
 
 function prepweb(host, s){
-	let webpage = "<html>\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<meta name=\"author\" content=\"CorsetHime\">\r\n<title>URL Shortener<\/title>\r\n<\/head>\r\n<body>\r\n<div style=\"text-align:center\">\r\n<input type=\"button\" value=\"URL Shortener\" onclick=\"shortener();\"\/>\r\n<input type=\"button\" value=\"Current Page\" onclick=\"prompt_curr_surl();\"\/>\r\n<p><div style=\"text-align:center\">\r\n<p>\r\n&lt;script type=&quot;text\/javascript&quot; src=&quot;http" + s + ":\/\/" + host + "\/surl.js&quot;&gt;&lt;\/script&gt;\r\n&lt;input type=&quot;button&quot; value=&quot;Short URL&quot; onclick=&quot;prompt_curr_surl();&quot;\/&gt;\r\n<\/p>\r\n<\/div><\/p>\r\n<\/div>\r\n<script type=\"text\/javascript\" src=\"http" + s + ":\/\/" + host + "\/surl.js\"><\/script>\r\n<\/body>\r\n<\/html>";
-	return webpage;
+	return mustache.render(fs.readFileSync('www/index.html') + "", {host:host, s:s});
 }
 
 function log(str){
@@ -237,8 +237,7 @@ function liststorage(res){
 }
 
 function prepscript(host, s){
-	let script = "var surlhost = \"" + host + "\";\r\nfunction shortener(){\r\n  let host = surlhost;\r\n  var orig_url = encodeURI(btoa(prompt(\"Please enter the url wants to be shortten\",window.location.href)));\r\n  let target_host = prompt(\"What host do you want to use?\",host);\r\n  try{\r\n    let xhr = new XMLHttpRequest();\r\n    xhr.open(\"GET\", \"http" + s + ":\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host, false);\r\n    xhr.send(null);\r\n    let res = xhr.responseText.split(\"|\");\r\n    prompt(\"Your input has been shortten\", res[0]);\r\n    let makeqr = confirm(\"Want QR?\");\r\n    if(makeqr){\r\n    console.log(res[1]);\r\n      openb64img(res[1]);\r\n    }\r\n  }catch(err){\r\n\twindow.open(\"http" + s + ":\/\/\" + host + \"\/shortener?url=\" + orig_url + \"&host=\" + target_host);\r\n  }\r\n}\r\nfunction surl(orig_url){\r\n  let host = surlhost;\r\n  let target_host = host;\r\n  let xhr = new XMLHttpRequest();\r\n  xhr.open(\"GET\", \"http" + s + ":\/\/\" + host + \"\/shortener?url=\" + encodeURI(btoa(orig_url)) + \"&host=\" + target_host, false);\r\n  xhr.send(null);\r\n  return (xhr.responseText).split(\"|\");\r\n}\r\nfunction prompt_curr_surl(){\r\n  prompt(\"Current page\",surl(window.location.href)[0]);\r\n}\r\nfunction openb64img(base64URL){\r\n  let win = window.open();\r\n  win.document.write(\'<iframe src=\"\' + base64URL  + \'\" frameborder=\"0\" style=\"border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;\" allowfullscreen><\/iframe>\');\r\n}\r\nfunction auto_short_url(){\r\n  let data = surl(window.location.href);\r\n  document.getElementById(\"curr_page_short_url\").innerHTML = data[0];\r\n}\r\nfunction auto_short_qr(){\r\n  let data = surl(window.location.href);\r\n  document.getElementById(\"curr_page_qr\").innerHTML = \"<img src=\\\"\" + data[1] + \"\\\" \\\/>\";\r\n}";
-	return script;
+	return mustache.render(fs.readFileSync('www/surl.js') + "", {host:host, s:s});
 }
 function prepwebjump(url){
 	let html = "<!DOCTYPE html>\r\n<html>\r\n<head>\r\n<\/head>\r\n<body>\r\n\t<script>\r\n\t  var link = document.createElement(\'meta\');\r\n\t  link.setAttribute(\'http-equiv\', \'refresh\');\r\n\t  link.setAttribute(\'content\', \"0; url=" + url.replace(/[\\"']/g, '\\$&') + "\" + window.location.href);\r\n\t  document.getElementsByTagName(\'head\')[0].appendChild(link);\r\n\t<\/script>\r\n<\/body>\r\n<\/html>";
