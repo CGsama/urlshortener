@@ -94,15 +94,9 @@ function app(req, res, https){
 		res.writeHeader(200, {"Content-Type": "application/javascript"});
 		res.write(prepscript(req.headers.host, https));
 		res.end();
-	}else if(fs.existsSync(file_path)){
+	}else if(fs.existsSync(file_path) && file_path.startsWith(path.resolve('www')) && file_path != path.resolve('www')){
 		log("resolve to: " + file_path);
-		if(file_path.startsWith(path.resolve('www'))){
-			return_file(res, file_path);
-		}else{
-			res.writeHead(404, {'content-type': 'text/plain'});
-			res.write("404");
-			res.end();
-		}
+		return_file(res, file_path);
 	}else if(url.parse(req.url).pathname.match(new RegExp("(^\\/check)(\\d\\d\\d\\d\\d\\d$)","g")) != null){
 		twofa(url.parse(req.url).pathname.substring(6,12), res)
 	}else{
