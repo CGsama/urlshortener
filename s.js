@@ -16,6 +16,7 @@ var mime = require('mime-types');
 var tfa = require('2fa');
 var qrcode = require('qrcode');
 var mustache = require('mustache');
+var path = require('path');
 
 
 //process.stdin.resume();
@@ -66,6 +67,7 @@ function app(req, res, https){
 		i.finalize();
 	}
 	log("request from " + requestIp.getClientIp(req) + " | " + req.headers.host + req.url);
+	let file_path = path.resolve('www' + url.parse(req.url).pathname);
 	if(url.parse(req.url).pathname == '/shortener'){
 		var send = false;
 		if(url.parse(req.url).query != null){
@@ -92,11 +94,15 @@ function app(req, res, https){
 		res.writeHeader(200, {"Content-Type": "application/javascript"});
 		res.write(prepscript(req.headers.host, https));
 		res.end();
-	}else if(url.parse(req.url).pathname == '/favicon.ico'){
-		return_file(res, "favicon.ico");
-	}
-	else if(url.parse(req.url).pathname == '/apple-touch-icon.png'){
-		return_file(res, "apple-touch-icon.png");
+	}else if(fs.existsSync(file_path)){
+		log("resolve to: " + file_path);
+		if(file_path.startsWith(path.resolve('www'))){
+			return_file(res, file_path);
+		}else{
+			res.writeHead(404, {'content-type': 'text/plain'});
+			res.write("404");
+			res.end();
+		}
 	}else if(url.parse(req.url).pathname.match(new RegExp("(^\\/check)(\\d\\d\\d\\d\\d\\d$)","g")) != null){
 		twofa(url.parse(req.url).pathname.substring(6,12), res)
 	}else{
@@ -217,7 +223,7 @@ function orig_url(host, pathname, res){
 }
 
 function prepweb(host, s){
-	return mustache.render(fs.readFileSync('www/index.html') + "", {host:host, s:s});
+	return mustache.render(fs.readFileSync('www/shortener.html') + "", {host:host, s:s});
 }
 
 function log(str){

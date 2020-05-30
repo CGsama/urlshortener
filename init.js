@@ -9,8 +9,8 @@ try{
 catch(e){
 	let obj = {};
 	obj.domain = readline.question("What is your domain? ");
-	obj.errjump = readline.question("What is your error jump? ");
 	obj.port = readline.question("What is your port? ");
+	obj.errjump = readline.question("What is your error jump? ");
 	obj.logging = readline.question("Wanna log usage? (Yes/No) ").toUpperCase() == "NO" ? false : true;
 	obj.usehost = readline.question("Wanna use request host? (Yes/No) ").toUpperCase() == "NO" ? false : true;
 	obj.googleprefix = encodeURI(readline.question("Keyword for empty google search prefix? ") + " ");
@@ -24,6 +24,9 @@ catch(e){
 	obj.msky.dbhost = readline.question("Msky DB hostname? ");
 	obj.msky.dbport = readline.question("Msky DB port? ");
 	obj.msky.db = readline.question("Msky DB name? ");
+	if(obj.errjump == ""){
+		obj.errjump = "404";
+	}
 	fs.writeFileSync('config.json', JSON.stringify(obj));
 	fs.writeFileSync('hostmap.json', "{}");
 	fs.writeFileSync('prefixmap.json', "{}");
