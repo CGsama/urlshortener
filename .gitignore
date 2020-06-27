@@ -1,0 +1,15 @@
+*
+*/
+!.gitignore
+!2fagen.js
+!addhost.js
+!addprefix.js
+!init.js
+!ls.js
+!mig.js
+!msky_s3_translate.js
+!package.json
+!s.js
+!twofa.js
+!www/
+
