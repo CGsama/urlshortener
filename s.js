@@ -8,7 +8,6 @@ var url = require('url');
 var fs = require('fs');
 var sqlite3 = require('sqlite3').verbose();
 //var db = new sqlite3.Database(':memory:');
-var db = new sqlite3.Database('url.db');
 var crypto = require('crypto');
 var hash = crypto.createHash('sha256');
 var buffer = require("Buffer");
@@ -20,6 +19,7 @@ var path = require('path');
 
 
 //process.stdin.resume();
+var db = {};
 var config = {};
 var hostmap = {};
 var prefixmap = {};
@@ -27,6 +27,7 @@ try{
 	config = JSON.parse(fs.readFileSync('config.json'));
 	hostmap = JSON.parse(fs.readFileSync('hostmap.json'));
 	prefixmap = JSON.parse(fs.readFileSync('prefixmap.json'));
+	db = new sqlite3.Database('url.db');
 }catch(e){
 	console.log("read config failed, use default");
 	config = {
@@ -40,6 +41,7 @@ try{
 		"privkey":"",
 		"fullchain":"",
 		"usessl":false};
+	db = new sqlite3.Database('data/url.db');
 }
 var domain = config.domain;
 var errjump = config.errjump;

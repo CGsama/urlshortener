@@ -1,8 +1,6 @@
 *
 */
 !.gitignore
-!.dockerignore
-!Dockerfile
 !2fagen.js
 !addhost.js
 !addprefix.js
@@ -14,4 +12,3 @@
 !s.js
 !twofa.js
 !www/
-
