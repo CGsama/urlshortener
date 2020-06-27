@@ -41,6 +41,9 @@ try{
 		"privkey":"",
 		"fullchain":"",
 		"usessl":false};
+	if (!fs.existsSync('data')){
+		fs.mkdirSync('data');
+	}
 	db = new sqlite3.Database('data/url.db');
 }
 var domain = config.domain;
