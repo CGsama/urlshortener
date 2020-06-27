@@ -33,7 +33,7 @@ catch(e){
 }
 finally{
 	var db = new sqlite3.Database('url.db');
-	db.run("CREATE TABLE url (short TEXT, long TEXT)");
-	db.run("CREATE TABLE history (time TEXT, ip TEXT, url TEXT)");
+	db.run("CREATE TABLE IF NOT EXISTS url (short TEXT, long TEXT)");
+	db.run("CREATE TABLE IF NOT EXISTS history (time TEXT, ip TEXT, url TEXT)");
 	db.close();
 }

@@ -20,9 +20,27 @@ var path = require('path');
 
 
 //process.stdin.resume();
-
-var rawconfig = fs.readFileSync('config.json');
-var config = JSON.parse(rawconfig);
+var config = {};
+var hostmap = {};
+var prefixmap = {};
+try{
+	config = JSON.parse(fs.readFileSync('config.json'));
+	hostmap = JSON.parse(fs.readFileSync('hostmap.json'));
+	prefixmap = JSON.parse(fs.readFileSync('prefixmap.json'));
+}catch(e){
+	console.log("read config failed, use default");
+	config = {
+		"domain":"localhost",
+		"port":"8080",
+		"errjump":"index",
+		"logging":true,
+		"usehost":true,
+		"googleprefix":"%20",
+		"webjump":false,
+		"privkey":"",
+		"fullchain":"",
+		"usessl":false};
+}
 var domain = config.domain;
 var errjump = config.errjump;
 var port = config.port;
@@ -32,12 +50,11 @@ var webjump = config.webjump;
 var totp = config.totp;
 var usessl = config.usessl;
 
-var hostmap = JSON.parse(fs.readFileSync('hostmap.json'));
-var prefixmap = JSON.parse(fs.readFileSync('prefixmap.json'));
-
 var httpscert;
 
 db.serialize(function() {
+	db.run("CREATE TABLE IF NOT EXISTS url (short TEXT, long TEXT)");
+	db.run("CREATE TABLE IF NOT EXISTS history (time TEXT, ip TEXT, url TEXT)");
 	http.createServer(http_app).listen(port, '0.0.0.0');
 	if(usessl){
 		httpscert = {
@@ -100,7 +117,7 @@ function app(req, res, https){
 	}else if(url.parse(req.url).pathname.match(new RegExp("(^\\/check)(\\d\\d\\d\\d\\d\\d$)","g")) != null){
 		twofa(url.parse(req.url).pathname.substring(6,12), res)
 	}else{
-		orig_url(req.headers.host, url.parse(req.url).pathname, res);
+		orig_url(req.headers.host, url.parse(req.url).pathname, res, https);
 	}
 }
 
@@ -152,7 +169,7 @@ function write_db(key, url){
 	//db.close();
 }
 
-function orig_url(host, pathname, res){
+function orig_url(host, pathname, res, https){
 	//var db = new sqlite3.Database('url.db');
 	let hash = pathname.substring(1,8);
 	//let out = "";
@@ -189,8 +206,10 @@ function orig_url(host, pathname, res){
 				}
 			}
 			if(unknown){
-				log("WARNING invalid request: " + host + pathname);
-				if(errjump == "404"){
+				log("WARNING invalid request: " + host + " " + pathname);
+				if(errjump == "index"){
+					res.writeHead(302, {'Location': "http" + https + "://" + host + "/shortener"});
+				}else if(errjump == "404"){
 					res.writeHead(404, {'content-type': 'text/plain'});
 					res.write("404");
 				}else if(errjump == "google"){
